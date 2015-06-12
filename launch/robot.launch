@@ -1,0 +1,14 @@
+<launch>
+	<!--  <param name="robot_description" command="$(find xacro)/xacro.py '$(find beaglebone)/demconRobot.xacro'" /> -->
+	<!-- <node name="robotPublisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen" /> -->
+
+	<node name="neato_laser_publisher" pkg="beaglebone" type="neato_laser_publisher" output="screen" />
+
+	<rosparam file="$(find beaglebone)/demcon_config.yaml" command="load"/>
+	<node name="MotionSensorDriver" pkg="beaglebone" type="MotionSensorDriver" output="screen"> </node>
+	<!-- <node name="RobotController" pkg="beaglebone" type="RobotController" output="screen"></node> -->
+
+	<node name="master_discovery_fkie" pkg="master_discovery_fkie" type="master_discovery" output="screen">
+		<param name="mcast_group" value="224.0.0.1"/>
+	</node>
+</launch>
