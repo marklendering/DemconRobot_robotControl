@@ -39,7 +39,7 @@ include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
 #sensor and motor drivers
 add_executable(MotionSensorDriver src/demconrobot_MotionSensorDriver.cpp)
-add_library(Driver src/MotionSensorDriver.cpp src/CanDriver.cpp)
+add_library(Driver src/MotionSensorDriver.cpp src/CanDriver.cpp src/MPU6000IMU.cpp)
 target_link_libraries(MotionSensorDriver Driver)
 target_link_libraries(MotionSensorDriver ${catkin_LIBRARIES})
 target_link_libraries(MotionSensorDriver ${Boost_LIBRARIES})
@@ -61,6 +61,12 @@ target_link_libraries(neato_laser_publisher xv11_laser_driver)
 target_link_libraries(neato_laser_publisher ${Boost_LIBRARIES})
 target_link_libraries(neato_laser_publisher ${catkin_LIBRARIES})
 
+#IMU
+add_library(imu_driver src/MPU6000IMU.cpp)
+add_executable(imu_publisher src/imu_publisher.cpp)
+target_link_libraries(imu_publisher imu_driver)
+target_link_libraries(imu_publisher ${catkin_LIBRARIES})
+target_link_libraries(imu_publisher ${Boost_LIBRARIES})
 
 #############
 ## Testing ##

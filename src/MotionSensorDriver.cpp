@@ -8,37 +8,17 @@ namespace DemconRobot
 	MotionSensorDriver::MotionSensorDriver()
 	{
 		canDriver = new CanDriver();
-		priv_nh.param("frame_id", frame_id, std::string("/laser_scanner"));
-		priv_nh.param("imu_id", imu_id, std::string("/base_imu"));
-		scan.angle_min=-PI;
-		imu.header.frame_id = imu_id;
-		scan.angle_max=PI;
-		scan.range_min=0.30;
-		scan.range_max=5.0;
-		scan.angle_increment=PI/180;
-		scan.header.frame_id=frame_id;
-		scan.time_increment=0;
-		scan.ranges.resize(360);
-		scan.intensities.resize(360);
 
-		LRSR_set = false;
 		speedR_set = false;
 		speedL_set = false;
-		LRSI_set = false;
 		DISTR_set = false;
 		DISTL_set = false;
-		start_flag = false;
-		finish_flag = false;
-		reset_counter = 0;
+
 		deltaDistanceRight = 0;
 		deltaDistanceLeft = 0;
 		speedRight = 0.0;
 		speedLeft = 0.0;
-		//IMU_RAW_pub = node_.advertise<SOMETHING>("IMU_RAW", 100);
-		Laser_pub = node_.advertise<sensor_msgs::LaserScan>("/laser/scan", 1000);
-		Imu_pub = node_.advertise<sensor_msgs::Imu>("/imu_data", 1); //1000
-		//LRS_RAW_pub = node_.advertise<beaglebone::LRS>("LRS_RAW", 100);
-		//replace LRS_RAW_pub with LaserScan 
+
 		WheelVelocities_pub = node_.advertise<beaglebone::WheelVelocities>("Wheel_Current_Velocities", 100);
 		WheelDistances_pub = node_.advertise<beaglebone::WheelDistances>("Wheel_Delta_Distance", 100);
 
@@ -67,33 +47,9 @@ namespace DemconRobot
 
 	void MotionSensorDriver::doUpdate()
 	{
-		
 		requestCANData('D', ALLMBEDS);
 		getCanData();
 		getCanData();
-		/*
-		requestCANData('V', ALLMBEDS);
-		getCanData();
-		getCanData();
-		*/
-		requestCANData(IMUACC);
-		getCanData();
-		requestCANData(IMUGYR);
-		getCanData();
-
-
-		//request candata for distance traveled
-		//getdata for mbed one
-		//getdata for mbed two
-		//
-
-		//get LRS data every tick
-		//every 10 ticks, update rest of data.
-
-		//get LRS data
-		//get Speed data
-		//get IMU data
-
 	}
 
 	void MotionSensorDriver::requestCANData(int canId)
@@ -112,42 +68,6 @@ namespace DemconRobot
 		canDriver->write_Bus(buf, 2, canId);
 	}
 
-	void MotionSensorDriver::getLRSData(char readBuffer[8], int length, int canId)
-	{
-		if(!start_flag && readBuffer[0]==0) start_flag = true;
-		if(length == 8 && start_flag)
-		{
-			if(canId == LRSR)
-			{
-				scan.ranges.push_back( (float(readBuffer[2]<<8|readBuffer[3]))/1000);
-				scan.ranges.push_back( (float(readBuffer[4]<<8|readBuffer[5]))/1000);
-				scan.ranges.push_back( (float(readBuffer[6]<<8|readBuffer[7]))/1000); 
-				LRSR_set = true;
-			}
-			else if(canId ==LRSI)
-			{
-				scan.intensities.push_back((readBuffer[2]<<8)|readBuffer[3]);
-				scan.intensities.push_back((readBuffer[4]<<8)|readBuffer[5]);
-				scan.intensities.push_back((readBuffer[6]<<8)|readBuffer[7]);
-				LRSI_set=true;
-			}
-		}
-		if(LRSI_set && LRSR_set){
-			reset_counter++;
-			if(reset_counter == 120){
-				//scan.header.stamp = ros::Time(0);		//set time in the header
-				scan.header.stamp = ros::Time::now();		//set time in the header
-				Laser_pub.publish(scan);
-				scan.ranges.clear();
-				scan.intensities.clear();
-				reset_counter = 0;
-				start_flag = false;
-				//printf("sent package! \n \r");
-			}
-			LRSI_set = false;
-			LRSR_set = false;
-		}
-	}
 
 	void MotionSensorDriver::getCanData()
 	{
@@ -159,17 +79,11 @@ namespace DemconRobot
 		{
 			switch(canId)
 			{
-				case LRSI: case LRSR :
-					getLRSData(readBuffer, length, canId);
-					break;
 				case ANS_DISTR: case ANS_DISTL:
 					getMotorDistance(readBuffer, length, canId);
 					break;
 				case BEAGLEBONE:
 					getSpeed(readBuffer, length, canId);
-					break;
-				case ANS_GYR: case ANS_ACC: case ANS_AKM:
-					getIMU(readBuffer, length, canId);
 					break;
 				default:
 					printf("incorrect canId: %d \r \n", canId);
@@ -178,76 +92,6 @@ namespace DemconRobot
 		}
 	}
 
-	void MotionSensorDriver::getIMU(char readBuffer[8], int length, int canId)
-	{
-		if(canId == ANS_ACC)
-		{
-			acc_set = true;
-			Adata[0] = create_float_from_bytes(readBuffer, 0);
-			Adata[1] = create_float_from_bytes(readBuffer, 2);
-			Adata[2] = create_float_from_bytes(readBuffer, 4);
-		}
-
-		else if(canId == ANS_GYR)
-		{
-			gyr_set = true;
-			Gdata[0] = create_float_from_bytes(readBuffer, 0);
-			Gdata[1] = create_float_from_bytes(readBuffer, 2);
-			Gdata[2] = create_float_from_bytes(readBuffer, 4);
-		}
-
-		if(acc_set && gyr_set)
-		{
-			imu.header.stamp = ros::Time::now() - ros::Duration(0.6);
-
-			geometry_msgs::Quaternion orientation;// = tf::createQuaternionMsgFromYaw(0.0);
-			gyr_set = false;
-			acc_set = false;
-
-			//imu.header.stamp = ros::Time::now();
-			//imu.orientation = tf::createQuaternionMsgFromYaw(0.0);
-			float roll = Gdata[0] * (PI/(131 * 180));
-			float pitch = Gdata[1] * (PI/(131 * 180));
-			float yaw = Gdata[2] * (PI/(131*180));
-			imu.angular_velocity.x = roll;
-			imu.angular_velocity.y = pitch;
-			imu.angular_velocity.z = yaw;
-			//imu.angular_velocity_covariance[0] = 0.001;
-			//imu.angular_velocity_covariance[4] = 0.001;
-			//imu.angular_velocity_covariance[8] = 0.001;
-			//tf::Quaternion orientation_quat = tf.transformations.quaternion_from_euler(0,0,yaw);
-			//imu.orientation = tf::createQuaternionMsgFromRollPitchYaw(roll, pitch, yaw);
-			imu.orientation = tf::createQuaternionMsgFromYaw(yaw);
-			//imu.orientation.x = orientation_quat[0];
-			//imu.orientation.y = orientation_quat[1];
-			//imu.orientation.z = orientation_quat[2];
-			//imu.orientation.w = orientation_quat[3];
-			//imu.orientation_covariance[0] = 0;
-			//imu.orientation_covariance[4] = 0;
-			//imu.orientation_covariance[8] = 0.001;
-
-			//imu.orientation = orientation;
-
-			imu.linear_acceleration.x = Adata[0] * (9.81/16834);
-			imu.linear_acceleration.y = Adata[1] * (9.81/16834);
-			imu.linear_acceleration.z = 0;//Adata[2] * (9.81/16834);
-			//imu.linear_acceleration_covariance[0] = 0.001;
-			//imu.linear_acceleration_covariance[4] = 0.001;
-			//imu.linear_acceleration_covariance[8] = 0.001;
-
-
-			//set orientation covariance
-			//set angular velocity covariance
-			//set linear velocity covariance
-			Imu_pub.publish(imu);
-
-		}
-		//get gyro and accelerometer data
-		//convert data to correct format
-		//create imu message and publish it.
-
-
-	}
 
 	void MotionSensorDriver::getMotorDistance(char readBuffer[8], int length, int canId)
 	{

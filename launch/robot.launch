@@ -3,6 +3,7 @@
 	<!-- <node name="robotPublisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen" /> -->
 
 	<node name="neato_laser_publisher" pkg="beaglebone" type="neato_laser_publisher" output="screen" />
+	<node name="imu_publisher" pkg="beaglebone" type="imu_publisher" output="screen" />
 
 	<rosparam file="$(find beaglebone)/demcon_config.yaml" command="load"/>
 	<node name="MotionSensorDriver" pkg="beaglebone" type="MotionSensorDriver" output="screen"> </node>
