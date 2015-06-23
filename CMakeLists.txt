@@ -35,8 +35,6 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 
-
-
 #sensor and motor drivers
 add_executable(MotionSensorDriver src/demconrobot_MotionSensorDriver.cpp)
 add_library(Driver src/MotionSensorDriver.cpp src/CanDriver.cpp src/MPU6000IMU.cpp)
@@ -45,14 +43,6 @@ target_link_libraries(MotionSensorDriver ${catkin_LIBRARIES})
 target_link_libraries(MotionSensorDriver ${Boost_LIBRARIES})
 add_dependencies(MotionSensorDriver beaglebone_gencpp)
 add_dependencies(Driver beaglebone_gencpp)
-
-#robot controller
-
-#add_executable(RobotController src/demconrobot_player.cpp src/player_node.cpp) 
-#add_dependencies(RobotController package_name_generate_messages_cpp)
-#target_link_libraries(RobotController ${catkin_LIBRARIES})
-#target_link_libraries(RobotController ${Boost_LIBRARIES})
-#add_dependencies(RobotController beablebone_gencpp)
 
 #laser scanner
 add_library(xv11_laser_driver src/xv11_laser.cpp)

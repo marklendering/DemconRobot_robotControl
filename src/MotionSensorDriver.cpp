@@ -236,22 +236,4 @@ namespace DemconRobot
 		canDriver->write_Bus(buffer, 2, ALLMBEDS);
 
 	}
-
-	float MotionSensorDriver::create_float_from_bytes(char * buf, int offset)
-	{
-		unsigned int b0, b1;
-		b0 = buf[offset];
-		b1 = buf[offset+1];
-		unsigned short total = (b0 <<8) | b1;
-
-		if((total&0x8000)==0x8000)
-		{
-			total = ((total xor 0xFFFF)+1);
-			total *= -1;
-		}
-
-		signed short stotal = total;
-		return (float)stotal;
-	}
-
 }
