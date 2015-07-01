@@ -88,6 +88,8 @@ namespace DemconRobot
 			float speedRight;
 			float speedLeft;
 			float create_float_from_bytes(char * buf, int offset); 
+			float totalDistanceRight;
+			float totalDistanceLeft;
 	};
 	union{
 		float Float;

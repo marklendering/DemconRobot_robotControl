@@ -16,9 +16,12 @@ namespace DemconRobot
 
 		deltaDistanceRight = 0;
 		deltaDistanceLeft = 0;
+		totalDistanceRight = 0;
+		totalDistanceLeft = 0;
 		speedRight = 0.0;
 		speedLeft = 0.0;
 
+		//advertise wheel (current)velocities and distances
 		WheelVelocities_pub = node_.advertise<beaglebone::WheelVelocities>("Wheel_Current_Velocities", 100);
 		WheelDistances_pub = node_.advertise<beaglebone::WheelDistances>("Wheel_Delta_Distance", 100);
 
@@ -31,6 +34,7 @@ namespace DemconRobot
 
 	int MotionSensorDriver::start()
 	{
+		//open canbus then subscribe to wheel set velocities
 		if(!canDriver->open_Bus((char*)"can1"))
 		{
 			return 1;
@@ -47,6 +51,7 @@ namespace DemconRobot
 
 	void MotionSensorDriver::doUpdate()
 	{
+		//get delta distance from wheels
 		requestCANData('D', ALLMBEDS);
 		getCanData();
 		getCanData();
@@ -79,12 +84,15 @@ namespace DemconRobot
 		{
 			switch(canId)
 			{
+				//motor distance left or right
 				case ANS_DISTR: case ANS_DISTL:
 					getMotorDistance(readBuffer, length, canId);
 					break;
+				//motor speed
 				case BEAGLEBONE:
 					getSpeed(readBuffer, length, canId);
 					break;
+				//default fail
 				default:
 					printf("incorrect canId: %d \r \n", canId);
 					break;
@@ -95,8 +103,10 @@ namespace DemconRobot
 
 	void MotionSensorDriver::getMotorDistance(char readBuffer[8], int length, int canId)
 	{
+		//check if package is correct length
 		if(length >= 5)
 		{
+			//convert data from buffer to integer type, so it can be transformed to a floating point value later one
 			converter.Int = ((readBuffer[1]<<0) + (readBuffer[2]<<8) + (readBuffer[3]<<16) + (readBuffer[4]<<24));
 			if(canId == ANS_DISTR)
 			{
@@ -112,9 +122,9 @@ namespace DemconRobot
 			if(DISTR_set && DISTL_set)
 			{
 				beaglebone::WheelDistances msg;
-				msg.right = deltaDistanceRight;
-				msg.left = deltaDistanceLeft;
-				//printf("distanceLeft: %f , distanceRight: %f \r \n", deltaDistanceLeft, deltaDistanceRight);
+				//~4% offset in measurement data and real world data. Add this to offset to correct values
+				msg.right = deltaDistanceRight * 1.04;
+				msg.left = deltaDistanceLeft * 1.04;
 				WheelDistances_pub.publish(msg);
 				DISTR_set = false;
 				DISTL_set = false;
@@ -136,7 +146,6 @@ namespace DemconRobot
 			{
 				speedR_set = true;
 				speedRight = converter.Float;
-		//set bool and variable
 			}
 			else if(readBuffer[0] == MCLEFT)
 			{
@@ -152,9 +161,7 @@ namespace DemconRobot
 				msg.right = speedRight * TFACTOR;
 				msg.left = speedLeft * TFACTOR;
 				WheelVelocities_pub.publish(msg);
-				//printf("speedRight: %f , speedLeft: %f \r \n", speedRight, speedLeft);
 			}
-			//if both bools set publish speed, or for now, just print speed.
 		}
 		return false;
 	}
@@ -181,14 +188,11 @@ namespace DemconRobot
 		buffer[4] = ((converter.Int >> 16) & 0xff);
 		buffer[5] = ((converter.Int >> 24) & 0xff);
 		canDriver->write_Bus(buffer, 6, MCRIGHT);
-		//printf("left speed: %f, right speed: %f \n \r", WheelVelocity->left, WheelVelocity->left);
+
+		//set robot state to start
 		setRobotState(START);
 
 	}
-
-	//getIMU data -> temp, gyro, accelerometer, compass data
-
-	//add method to convert raw LRS data to laserscan data, then publish this data
 
 	bool MotionSensorDriver::initRobot()
 	{
